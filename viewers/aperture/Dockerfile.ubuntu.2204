@@ -18,7 +18,7 @@ ENV FMOD_HASH=
 ENV FMOD_FILENAME=
 
 # Builds as ApertureOS-$CHAN-version
-ENV CHAN="LinuxSELFBUILD"
+ENV CHAN="LinuxUbuntu2204"
 
 # and places the built tar.xz file in the current dir.
 
@@ -36,11 +36,10 @@ VOLUME /host
 RUN apt-get update && apt-get -y upgrade && apt-get -y dist-upgrade
 
 # Get all the required libs
-RUN apt install -y libgl1-mesa-dev libglu1-mesa-dev libpulse-dev build-essential python3-pip git libssl-dev libxinerama-dev libxrandr-dev libfontconfig-dev libfreetype6-dev gcc-11 cmake
+RUN apt install -y libgl1-mesa-dev libglu1-mesa-dev libpulse-dev build-essential python3-pip git libssl-dev libxinerama-dev libxrandr-dev libfontconfig-dev libfreetype6-dev gcc g++ cmake
 
-# Install uv
-RUN pip install uv
-ENV PATH="/src/Aperture-Viewer/.venv/bin:$PATH"
+# to let us run python virtualenv for build
+RUN apt install -y python3-venv
 
 RUN mkdir /src
 
@@ -66,10 +65,11 @@ RUN --mount=type=bind,target=/host cp -R fs-build-variables Aperture-Viewer /src
 ENV AUTOBUILD_VARIABLES_FILE=/src/fs-build-variables/variables
 WORKDIR /src/Aperture-Viewer
 
-RUN uv venv
+ENV PATH="/ve/bin:$PATH"
+RUN python3 -m venv /ve
 
 # Install requirements, including autobuild
-RUN uv pip install -r requirements.txt
+RUN /ve/bin/pip3 install -r requirements.txt
 
 RUN if [ ! "x$FMOD_HASH" = "x" ]; then \
         autobuild installables edit fmodstudio platform=linux64 hash=$FMOD_HASH url=file://$FMOD_FILENAME; \
