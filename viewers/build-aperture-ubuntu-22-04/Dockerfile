@@ -40,7 +40,6 @@ RUN apt install -y libgl1-mesa-dev libglu1-mesa-dev libpulse-dev build-essential
 
 # Install uv
 RUN pip install uv
-RUN uv venv
 ENV PATH="/src/Aperture-Viewer/.venv/bin:$PATH"
 
 RUN mkdir /src
@@ -66,6 +65,8 @@ RUN --mount=type=bind,target=/host cp -R fs-build-variables Aperture-Viewer /src
 
 ENV AUTOBUILD_VARIABLES_FILE=/src/fs-build-variables/variables
 WORKDIR /src/Aperture-Viewer
+
+RUN uv venv
 
 # Install requirements, including autobuild
 RUN uv pip install -r requirements.txt
