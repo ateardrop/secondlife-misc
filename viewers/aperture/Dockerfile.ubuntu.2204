@@ -18,7 +18,7 @@ ENV FMOD_HASH=
 ENV FMOD_FILENAME=
 
 # Builds as ApertureOS-$CHAN-version
-ENV CHAN="LinuxTEST"
+ENV CHAN="LinuxSELFBUILD"
 
 # and places the built tar.xz file in the current dir.
 
