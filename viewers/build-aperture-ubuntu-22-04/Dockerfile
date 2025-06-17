@@ -1,0 +1,90 @@
+FROM ubuntu:22.04 AS build-stage
+
+# call with
+#    docker build . -o .
+
+# Expects the following code to be checked out in current dir:
+
+#  Dockerfile
+#  Aperture-Viewer/
+#  3p-fmodstudio/
+#  fs-build-variables/
+
+# 3p-fmodstudio will need to have been downloaded from their site and 
+# placed in the 3p-fmodstudio dir and
+# the HASH and FILENAME extracted to put here:
+# If you don't do this, and leave these blank, we'll build without FMOD.
+ENV FMOD_HASH=
+ENV FMOD_FILENAME=
+
+# Builds as ApertureOS-$CHAN-version
+ENV CHAN="LinuxTEST"
+
+# and places the built tar.xz file in the current dir.
+
+
+# --
+# Setup base system
+# --
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# we expect source code and output dir to be mounted here
+VOLUME /host
+
+# Update repo and existing packages
+RUN apt-get update && apt-get -y upgrade && apt-get -y dist-upgrade
+
+# Get all the required libs
+RUN apt install -y libgl1-mesa-dev libglu1-mesa-dev libpulse-dev build-essential python3-pip git libssl-dev libxinerama-dev libxrandr-dev libfontconfig-dev libfreetype6-dev gcc-11 cmake
+
+# Install uv
+RUN pip install uv
+RUN uv venv
+ENV PATH="/src/Aperture-Viewer/.venv/bin:$PATH"
+
+RUN mkdir /src
+
+WORKDIR /host
+
+
+# --
+# Copy in source code and set the autobuild environment
+# --
+
+# If we're using FMOD, copy it over
+RUN --mount=type=bind,target=/host \
+    if [ ! "x$FMOD_HASH" = "x" ]; then \
+        cp -R 3p-fmodstudio /src/; \
+    fi
+
+RUN --mount=type=bind,target=/host cp -R fs-build-variables Aperture-Viewer /src/
+
+# --
+# Configure and build
+# --
+
+ENV AUTOBUILD_VARIABLES_FILE=/src/fs-build-variables/variables
+WORKDIR /src/Aperture-Viewer
+
+# Install requirements, including autobuild
+RUN uv pip install -r requirements.txt
+
+RUN if [ ! "x$FMOD_HASH" = "x" ]; then \
+        autobuild installables edit fmodstudio platform=linux64 hash=$FMOD_HASH url=file://$FMOD_FILENAME; \
+    fi
+
+RUN if [ ! "x$FMOD_HASH" = "x" ]; then \
+        autobuild configure -A 64 -c ReleaseFS_open -- --chan="$CHAN" --clean --fmodstudio; \
+    else \
+        autobuild configure -A 64 -c ReleaseFS_open -- --chan="$CHAN" --clean ; \
+    fi
+
+RUN autobuild build -A 64 -c ReleaseFS_open -- --chan="$CHAN"
+
+
+# --
+# Copy the resulting viewer package somewhere we can find it
+# --
+FROM scratch AS output
+COPY --from=build-stage /src/Aperture-Viewer/build-linux-x86_64/newview/Aperture*.tar* /
