@@ -13,12 +13,12 @@ FROM ubuntu:24.04 AS build-stage
 # 3p-fmodstudio will need to have been downloaded from their site and 
 # placed in the 3p-fmodstudio dir and
 # the HASH and FILENAME extracted to put here:
-# If you don't do this, and leave these blank, we'll build without FMOD.
 ENV FMOD_HASH=
 ENV FMOD_FILENAME=
+# If you don't do this, and leave these blank, we'll build without FMOD.
 
 # Builds as ApertureOS-$CHAN-version
-ENV CHAN="LinuxUbuntu2404"
+ENV CHAN="LinuxSelfCompile"
 
 # and places the built tar.xz file in the current dir.
 
@@ -36,9 +36,10 @@ VOLUME /host
 RUN apt-get update && apt-get -y upgrade && apt-get -y dist-upgrade
 
 # Get all the required libs
-RUN apt install -y libgl1-mesa-dev libglu1-mesa-dev libpulse-dev build-essential python3-pip git libssl-dev libxinerama-dev libxrandr-dev libfontconfig-dev libfreetype6-dev gcc-11 g++-11 cmake
-RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 90 --slave /usr/bin/g++ g++ /usr/bin/g++-11 --slave /usr/bin/gcov gcov /usr/bin/gcov-11
-ENV CXX=/usr/bin/g++-11
+RUN apt install -y libgl1-mesa-dev libglu1-mesa-dev libpulse-dev build-essential python3-pip git libssl-dev libxinerama-dev libxrandr-dev libfontconfig-dev libfreetype6-dev gcc g++ cmake
+# RUN apt install -y libgl1-mesa-dev libglu1-mesa-dev libpulse-dev build-essential python3-pip git libssl-dev libxinerama-dev libxrandr-dev libfontconfig-dev libfreetype6-dev gcc-11 g++-11 cmake
+# RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 90 --slave /usr/bin/g++ g++ /usr/bin/g++-11 --slave /usr/bin/gcov gcov /usr/bin/gcov-11
+# ENV CXX=/usr/bin/g++-11
 
 # to let us run python virtualenv for build
 RUN apt install -y python3-venv
@@ -78,12 +79,13 @@ RUN if [ ! "x$FMOD_HASH" = "x" ]; then \
     fi
 
 RUN if [ ! "x$FMOD_HASH" = "x" ]; then \
-        autobuild configure -A 64 -c ReleaseFS_open -- --chan="$CHAN" --clean --fmodstudio; \
+        autobuild configure -A 64 -c ReleaseFS_open -- --chan="$CHAN" --fmodstudio --avx2; \
+        autobuild build -A 64 -c ReleaseFS_open -- --chan="$CHAN" --fmodstudio --avx2; \
     else \
-        autobuild configure -A 64 -c ReleaseFS_open -- --chan="$CHAN" --clean ; \
+        autobuild configure -A 64 -c ReleaseFS_open -- --chan="$CHAN" --avx2 ; \
+        autobuild build -A 64 -c ReleaseFS_open -- --chan="$CHAN" --avx2 ; \
     fi
 
-RUN autobuild build -A 64 -c ReleaseFS_open -- --chan="$CHAN"
 
 
 # --
